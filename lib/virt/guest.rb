@@ -123,15 +123,18 @@ module Virt
 
     def fetch_info
       return if @domain.nil?
+      # @domain.xml_desc causes find entity by inventory path and find entity by UUID in ESX console
+      # TODO: catch error when processing xml_desc
       @xml_desc       = @domain.xml_desc
-      @memory         = @domain.max_memory
-      @current_memory = document("domain/currentMemory") if running?
+      # causes find entity by UUID in ESX
+      dominfo = @domain.info
+      @memory         = dominfo.max_mem
+      @current_memory = document("domain/currentMemory") if running?(true)
       @type           = document("domain", "type")
       @vcpu           = document("domain/vcpu")
       @arch           = document("domain/os/type", "arch")
       @machine        = document("domain/os/type", "machine")
       @boot_device    = document("domain/os/boot", "dev") rescue nil
-
       # do we have a NIC?
       network_type = document("domain/devices/interface", "type") rescue nil
 
