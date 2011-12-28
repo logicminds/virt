@@ -7,6 +7,7 @@ module Virt
     def initialize options = {}
       @connection = Virt.connection
       @host = @connection.host
+      @volumes = []
       @name = options[:name] || raise("Must provide a name")
       @staticstate = nil
       # we will need the libvirt domain object to retreive the information
@@ -138,7 +139,7 @@ module Virt
       # do we have a NIC?
       network_type = document("domain/devices/interface", "type") rescue nil
       fetch_interfaces(network_type)
-     
+      fetch_volumes
     end
 
     def fetch_interfaces(network_type)
@@ -149,6 +150,28 @@ module Virt
         @interface.device  = document("domain/devices/interface/source", "bridge")  if @interface.type == "bridge"
         @interface.network = document("domain/devices/interface/source", "network") if @interface.type == "network"
       end
+    end
+    
+    def fetch_volumes
+      # Need to loop through the xml document to create multiple disk devices
+      diskdevices  = document("domain/devices/disk", nil, true)
+      diskdevices.each { |d|
+        # Get the type of disk and make sure its a disk and not a cdrom
+        disktype      = document("disk", "device",false, d.to_s)
+        # filter out any non-disk devices like cdroms, floppy, Raw disk devices?
+        next if disktype != "disk"
+        # The match should get the string inside the file attribute [datastore] filename/filename.xxx
+        diskobj      = document("disk/source", "file", false, d.to_s).match(/\[(.+)\]\ (.+\/.+)/)
+        poolname     = diskobj[1]
+        volname      = diskobj[2]
+        @volumes << to_volume({:pool => poolname, :name => volname})
+      }
+    end
+
+    def to_volume(options = {})
+      # override this in the subclass to create hypervisor specific virt volume objects
+      # takes a vol name and pool name
+      #Volume.new(options)
     end
 
     def default_memory_size
