@@ -7,7 +7,7 @@ module Virt
     def initialize options = {}
       @connection = Virt.connection
       @name = options[:name] || raise("Must provide a name")
-
+      @staticstate = nil
       # If our domain exists, we ignore the provided options and defaults
       fetch_guest
       @memory ||= options[:memory] || default_memory_size
@@ -33,13 +33,27 @@ module Virt
       running?
     end
 
-    def running?
+    def running?(static=false)
+      # 0 = nostate
+      # 1 = running
+      # 2 = blocked on resource
+      # 3 = domain is paused
+      # 4 = being shut down
+      # 5 = domain is shut off
+      # http://www.libvirt.org/html/libvirt-libvirt.html#virDomainState
       return false if new?
-      @domain.active?
+      # use the staticstate for non-realtime state lookups (each lookup cost about 10-20 ms)
+      if !static or @staticstate.nil?
+        # causes find entity by UUID in ESX
+        # this will cache the current state for future lookups
+        @staticstate = @domain.info.state
+      end
+      return @staticstate == 1
+      
     rescue
       # some versions of libvirt do not support checking for active state
       @connection.connection.list_domains.each do |did|
-        return true if @connection.connection.lookup_domain_by_id(did).name == name
+        return true if @connection.connection.lookup_domain_by_id(did).name == name  
       end
       false
     end
