@@ -6,8 +6,14 @@ module Virt
 
     def initialize options = {}
       @connection = Virt.connection
+      @host = @connection.host
       @name = options[:name] || raise("Must provide a name")
       @staticstate = nil
+      # we will need the libvirt domain object to retreive the information
+      # since we already created the object in the host class we can just use the cache to retreive it
+      if @name and @host
+      	@domain = @host.libvirtcache[@name]
+      end
       # If our domain exists, we ignore the provided options and defaults
       fetch_guest
       @memory ||= options[:memory] || default_memory_size
@@ -102,9 +108,14 @@ module Virt
     protected
 
     def fetch_guest
-      @domain = @connection.connection.lookup_domain_by_name(name)
-      fetch_info
-    rescue Libvirt::RetrieveError
+     if @domain.nil?
+        # this is done if only the name was passed in
+        @domain = @connection.connection.lookup_domain_by_name(name)
+        # cache the results
+        @host.libvirtcache[@domain.name] = @domain
+     end
+     fetch_info
+   rescue Libvirt::RetrieveError
     end
 
     def fetch_info
