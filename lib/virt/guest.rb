@@ -137,14 +137,18 @@ module Virt
       @boot_device    = document("domain/os/boot", "dev") rescue nil
       # do we have a NIC?
       network_type = document("domain/devices/interface", "type") rescue nil
+      fetch_interfaces(network_type)
+     
+    end
 
+    def fetch_interfaces(network_type)
       unless network_type.nil?
         @interface       ||= Interface.new
         @interface.type    = network_type
         @interface.mac     = document("domain/devices/interface/mac", "address")
         @interface.device  = document("domain/devices/interface/source", "bridge")  if @interface.type == "bridge"
         @interface.network = document("domain/devices/interface/source", "network") if @interface.type == "network"
-     end
+      end
     end
 
     def default_memory_size
