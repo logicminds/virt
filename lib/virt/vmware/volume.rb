@@ -10,23 +10,26 @@ module Virt::VMWare
     end
 
     def path
+      # this may not work correctly if user changes name of vm
+      # this file should only be used to create new a vm
       "[#{pool.name}] #{self}"
     end
 
     def name= name
       super name
+      # add .vmdk uless it already is appended
       @name += ".vmdk" unless name.match(/.*\.vmdk$/)
     end
 
     def to_s
-      "#{title}/#{name}"
+      "#{name}"
     end
 
-    private
+    protected
 
     def title
       name.chomp(".vmdk")
     end
-
+ 
   end
 end

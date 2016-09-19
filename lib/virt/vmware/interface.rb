@@ -8,8 +8,9 @@ module Virt::VMWare
     end
 
     def default_device
-      @connection.host.interfaces.first
-    rescue
+    # this option is not yet supported by libvirt
+        #  @connection.host.interfaces.first
+        #rescue
       "VM Network"
     end
 
@@ -23,3 +24,4 @@ module Virt::VMWare
 
   end
 end
+
